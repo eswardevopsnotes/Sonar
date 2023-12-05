@@ -1,0 +1,100 @@
+# Follow the below link to install postgresql in amazonlinux2
+#https://linux.how2shout.com/how-to-install-postgresql-14-on-ec2-amazon-linux-2/
+sudo yum update
+sudo yum install java-17-amazon-corretto-devel -y 
+
+#Step 2: Adding Postgresql 14 Yum repository
+sudo tee /etc/yum.repos.d/pgdg.repo<<EOF
+
+[pgdg14]
+
+name=PostgreSQL 14 for RHEL/CentOS 7 - x86_64
+
+baseurl=https://download.postgresql.org/pub/repos/yum/14/redhat/rhel-7-x86_64
+
+enabled=1
+
+gpgcheck=0
+
+EOF
+#
+sudo yum update
+
+#Step 3: Installing Postgresql 14 on Amazon Linux 2
+sudo yum install postgresql14 postgresql14-server
+
+#Step 4: Initialize the Database
+sudo /usr/pgsql-14/bin/postgresql-14-setup initdb
+#In return you will get  .... Initializing database ... OK
+
+#Step 5: Start and Enable the PostgreSQL Service
+sudo systemctl start postgresql-14
+sudo systemctl enable postgresql-14
+sudo systemctl status postgresql-14
+
+#Step 6: Configure PostgreSQL
+#. 1.Change the Admin database password(postgres) (admin123)
+sudo passwd postgres
+# Login using Postgres system account-
+su - postgres
+# Now, change the Admin database password-
+psql -c "ALTER USER postgres WITH PASSWORD 'your-password';"
+#psql -c "ALTER USER postgres WITH PASSWORD 'admin123';"
+
+#2. Primary configuration file
+#So, far we have learned all the key things to make PostgreSQL up and running without any warnings in Amazon Linux.
+#To perform any further configurations, users need to access the primary configuration file of PostgreSQL located at /var/lib/pgsql/"version"/data/postgresql.conf.
+# We can edit this file with text editors such as VIM or Nano.
+
+#Don’t arbitrarily change anything from this file because it may result in the malfunctioning of the Database server. 
+#It is good to take a backup of the file before performing any addition.
+sudo cp /var/lib/pgsql/14/data/postgresql.conf /var/lib/pgsql/14/data/postgresql.conf.bak
+
+#4. Listen to the Address
+#By default, the PostgreSQL server will listen to only localhost. But, if you want it to answer for a specific IP address or range or all addresses,
+#we can do that by changing the value of the listen_addresses option in the configuration file:
+#Find it and remove the given in front of the option. After that add the address that you want the server to only listen to.
+#listen_addresses = 'localhost'
+#For all Ip-addresses use: listen_addresses = '*'listen_addresses = '*'
+#only change if db should listen from outside .For sonar we dont require to change.
+
+sudo vi /var/lib/pgsql/14/data/postgresql.conf
+#Save and quit
+
+#5. Authentication(Remote)
+#For Authentication, there is a separate file called “pg_hba.conf” apart from the Primary configuration file in the same directory.
+#Well, by default; PostgreSQL allows all DB users and hosts locally to connect to the database with a peer or scram-sha-256 method.
+#If you want to change that, we can edit the pg_hba.conf file and set the authentication method to md5.
+#To edit this file, run the following command:
+#Modify #IPV4 Local Connections
+sudo vi /var/lib/pgsql/14/data/pg_hba.conf
+
+host all all 0.0.0.0/0 md5
+
+sudo vi /var/lib/pgsql/14/data/pg_hba.conf
+
+sudo systemctl start postgresql-14
+
+#How to Create a User & Database
+
+#1.First, connect to the PostgreSQL server as a postgres user by running the following command
+sudo -u postgres psql
+
+#2.Once you’re logged in, you can create a new Database user by running the given syntax:
+#userid:sonar
+#password:admin123(password should be in 'anyPasssword')
+CREATE USER your-username WITH PASSWORD 'password';
+
+#3.After creating the user, let’s create a new database by running the following command:
+Databasename:sonarqubedb
+CREATE DATABASE database_name;
+
+#4.We have a new PostgreSQL user and Database, let’s grant all the rights of the created Database
+#to our newly created user. So that it can access it to store data.
+GRANT ALL PRIVILEGES ON DATABASE database_name TO your-username;
+GRANT ALL PRIVILEGES ON DATABASE sonarqubedb TO sonar;
+
+
+#5.To check whether the database and user are created just run the given command and it 
+#will list all the available PostgreSQL users and Databases.
+\l
